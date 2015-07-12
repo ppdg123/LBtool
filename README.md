@@ -1,5 +1,7 @@
 #Labeling tools#
 
+**Build Status :** [![Build Status](https://travis-ci.org/ppdg123/LBtool.svg?branch=master)](https://travis-ci.org/ppdg123/LBtool)
+
 ##configuration##
 
 Please modify LBtool.conf before labeling
