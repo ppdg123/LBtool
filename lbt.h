@@ -21,6 +21,7 @@
 #define TYPE_PNT 2
 #define TYPE_SP 3
 #define TYPE_ATTR 4
+#define TYPE_SQR 5
 
 #define PADDING_X 20
 #define PADDING_Y 20

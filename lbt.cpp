@@ -3,6 +3,7 @@
 IplImage * im,*spim,*showim=NULL;
 CvMat * spmat;
 
+//all target images
 char * file_set[MAX_LB_FILE ];
 int file_set_cnt;
 int cur_file_ptr;
@@ -36,6 +37,17 @@ void initSpValue()
 	for(i=0;i<MAX_POINT;i++) sp_val[i] = -1;
 }
 
+void initSQRValue()
+{
+      int i ; 
+     for(i=0;i<point_set_cnt;i++)
+     {
+         point_val[i][0] = -1;
+	 point_val[i][1] = -1;
+     } 
+     cur_point_ptr = 0;
+}
+//Load all target images, saved in file_set.
 void loadFilenames()
 {
 	file_set_cnt = 0;
@@ -61,6 +73,13 @@ void loadFilenames()
 
 void loadConf()
 {
+	/*
+	   config file:
+	   TYPE
+	   POINT1
+	   POINT2
+	   ...
+	 */
 	FILE * fp;
 	char cmd[STR_SIZE];
 	int nval,idx,i,cnt;
@@ -77,6 +96,7 @@ void loadConf()
 	if(0==strcmp(cmd,"point")) lb_type = TYPE_PNT;
 	if(0==strcmp(cmd,"sp")) lb_type=TYPE_SP;
 	if(0==strcmp(cmd,"attr")) lb_type=TYPE_ATTR;
+	if(0==strcmp(cmd,"sqr")) lb_type = TYPE_SQR;
 	
 	if(lb_type<0)
 	{
@@ -95,9 +115,21 @@ void loadConf()
 		fprintf(stderr,"wrong config file : point number\n");
 		exit(-1);
 	}
+	if(lb_type == TYPE_SQR&&point_set_cnt != 2)
+	{
+		fprintf(stderr,"2 points required(left , right)\n");
+		exit(-1);
+	}
 	fclose(fp);
 	if(lb_type==TYPE_PNT)
 	{
+		/*LBline.conf
+		 POINTNAME1 POINTNAME2
+		 POINTNAME3 POINTNAME4
+		 ...
+
+		 In TYPE_PNT, these lines are only draw on the showimg, but not for saving.
+		 */
 		fp = fopen(LINE_SET_FILE,"r");
 		if(!fp){
 			fprintf(stderr,"Line config not set\n");
@@ -287,6 +319,10 @@ void loadDataFile(char * img_file)
 			}
 		}
 	}
+	if(lb_type==TYPE_SQR)
+	{
+	     initSQRValue();
+	}
 	if(fp) fclose(fp);
 }
 
@@ -322,6 +358,19 @@ void saveDataFile(char * img_file)
 		}
 	}
 	fclose(fp);
+}
+
+void saveSQR()
+{
+	int S;
+	if(point_val[0][0]<0||point_val[1][0]<0||cur_point_ptr!=0) return;
+	S = abs(point_val[0][0]-point_val[1][0]);
+
+	cvSetImageROI(im,cvRect(point_val[0][0],point_val[0][1],S,S));
+	char sfn[STR_SIZE];
+	sprintf(sfn,"./res/%d_%d.jpg",cur_file_ptr,rand()%10000);
+	cvSaveImage(sfn,im);
+	cvResetImageROI(im);
 }
 
 void initUI()
@@ -373,6 +422,25 @@ IplImage * showRecs(IplImage * img)
 		}
 	}
 	img = showPoints(img);
+	return img;
+}
+
+IplImage * showSQR(IplImage * img)
+{
+	int i,x1,y1,x2,y2,S;
+	x1 = point_val[0][0];
+	y1 = point_val[0][1];
+	x2 = point_val[1][0];
+	y2 = point_val[1][1];
+	
+	if(cur_point_ptr != 0||x1<0||x2<0)
+	{
+	    return img;
+	}
+	
+	S = abs(x2-x1);
+	cvRectangle(img,cvPoint(x1,y1),cvPoint(x1+S,y1+S),cvScalar(0,0,255),LINE_THICK);
+
 	return img;
 }
 
@@ -437,6 +505,9 @@ void showImage()
 		case TYPE_ATTR:
 			showim = showAttr(showim);
 			break;
+		case TYPE_SQR:
+			showim = showSQR(showim);
+			break;
 	}
 
 	if(lb_type==TYPE_REC||lb_type==TYPE_PNT||lb_type==TYPE_ATTR)
@@ -467,10 +538,14 @@ void mCallBack(int event,int x,int y, int flags, void * userdata)
 	if(event == CV_EVENT_LBUTTONDOWN)
 	{
 		printf("x:%d y:%d\n",x,y);
-		if(lb_type==TYPE_REC||lb_type==TYPE_PNT)
+		if(lb_type==TYPE_REC||lb_type==TYPE_PNT||lb_type==TYPE_SQR)
 		{
 			point_val[cur_point_ptr][0] = x;
 			point_val[cur_point_ptr][1] = y;
+			if(cur_point_ptr==1&&lb_type==TYPE_SQR)
+			{
+				cur_point_ptr = -1;    
+			}
 			nextPoint();
 		}
 		if(lb_type==TYPE_SP)
@@ -597,5 +672,10 @@ void kCallBack(char ch)
 			nextAttrVal();
 			showImage();
 			break;
+		case 'c':
+			if(lb_type==TYPE_SQR)
+			{
+		        	saveSQR();
+			}
 	}
 }
