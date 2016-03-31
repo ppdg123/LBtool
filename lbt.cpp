@@ -24,6 +24,9 @@ char attr_val_name[MAX_ATTR][MAX_ATTR_VAL][STR_SIZE];
 int attr_val_cnt[MAX_ATTR];
 int attr_val[MAX_ATTR];
 
+//for degree anotation (texture:density,cycle...)
+int degree = 5;
+
 void clearCur()
 {
 	if(im) cvReleaseImage(&im);
@@ -97,6 +100,7 @@ void loadConf()
 	if(0==strcmp(cmd,"sp")) lb_type=TYPE_SP;
 	if(0==strcmp(cmd,"attr")) lb_type=TYPE_ATTR;
 	if(0==strcmp(cmd,"sqr")) lb_type = TYPE_SQR;
+	if(0==strcmp(cmd,"deg")) lb_type = TYPE_DEG;
 	
 	if(lb_type<0)
 	{
@@ -247,12 +251,13 @@ int findAttrValByName(int idx,char * name)
 
 void loadDataFile(char * img_file)
 {
-	char cmd[STR_SIZE],attr[STR_SIZE];
+	char cmd[STR_SIZE],attr[STR_SIZE],cmpfile[STR_SIZE];
 	int x,y,idx,idxv;
 	int i,j;
 	int b,g,r;
 	sprintf(cmd,"%s.dat",img_file);
-	FILE * fp;
+	sprintf(cmpfile,"%s.cmp",img_file);
+	FILE * fp, * cmpfp;
 	fp = fopen(cmd,"r");
 
 	if(lb_type==TYPE_PNT||lb_type==TYPE_REC)
@@ -323,6 +328,21 @@ void loadDataFile(char * img_file)
 	{
 	     initSQRValue();
 	}
+
+	if(lb_type==TYPE_DEG)
+	{
+	    //degree = 0;
+	    int cmpd;
+	    if(fp) fscanf(fp,"%d",&degree);
+	    //printf("cmp : %s\n",cmpfile);
+	    cmpfp = fopen(cmpfile,"r");
+	    if(cmpfp)
+	    {
+		    fscanf(cmpfp,"%d",&cmpd);
+		    printf("CMP : %d\n",cmpd);
+		    fclose(cmpfp);
+	    }
+	}
 	if(fp) fclose(fp);
 }
 
@@ -356,6 +376,10 @@ void saveDataFile(char * img_file)
 		{
 			fprintf(fp,"%s %s\n",point_set[i],attr_val_name[i][attr_val[i]]);
 		}
+	}
+	if(lb_type==TYPE_DEG)
+	{
+		fprintf(fp,"%d\n",degree);
 	}
 	fclose(fp);
 }
@@ -484,6 +508,37 @@ IplImage * showAttr(IplImage * img)
 	return img;
 }
 
+IplImage * showDegree(IplImage * img)
+{
+	int bar_height = 10;
+	int height = img->height;
+	int width = img->width;
+	int bar_width = 100>width?100:width;
+	IplImage * res;
+	res = cvCreateImage(cvSize(bar_width,bar_height+height),IPL_DEPTH_8U,3);
+	int i,j;
+	for(i=0;i<res->height;i++)
+	{
+	   for(j=0;j<res->width;j++)
+	   {
+		   CV_IMAGE_ELEM(res,uchar,i,j*3) = 255;
+		   CV_IMAGE_ELEM(res,uchar,i,j*3+1) = 255;
+		   CV_IMAGE_ELEM(res,uchar,i,j*3+2) = 255;
+	   }
+	}
+	cvSetImageROI(res,cvRect((bar_width-width)/2,0,width,height));
+	cvCopy(img,res);
+	cvResetImageROI(res);
+	cvReleaseImage(&img);
+	int rectwidth = bar_width*degree/9;
+	cvRectangle(res,cvPoint(0,height+1),cvPoint(rectwidth,height+bar_height),cvScalar(255,0,0),-1);
+	//cvNamedWindow("ppf",CV_WINDOW_NORMAL);
+	//cvShowImage("ppf",res);
+	//cvWaitKey();
+	//while(1);
+	return res;
+}
+
 void showImage()
 {
 	if(showim)
@@ -507,6 +562,9 @@ void showImage()
 			break;
 		case TYPE_SQR:
 			showim = showSQR(showim);
+			break;
+		case TYPE_DEG:
+			showim = showDegree(showim);
 			break;
 	}
 
@@ -677,5 +735,11 @@ void kCallBack(char ch)
 			{
 		        	saveSQR();
 			}
+	}
+	if(ch>='0'&&ch<='9'&&lb_type==TYPE_DEG)
+	{
+		degree = ch-'0';
+		printf("%c\n",ch);
+		showImage();
 	}
 }

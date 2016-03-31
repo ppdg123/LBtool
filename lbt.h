@@ -22,6 +22,8 @@
 #define TYPE_SP 3
 #define TYPE_ATTR 4
 #define TYPE_SQR 5
+//degrees 1-9
+#define TYPE_DEG 6
 
 #define PADDING_X 20
 #define PADDING_Y 20
