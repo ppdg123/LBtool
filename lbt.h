@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#define STR_SIZE 200
+#define STR_SIZE 400
 #define IMG_DIR "./img"
 #define MAX_LB_FILE 50000
 #define MAX_POINT 1000
